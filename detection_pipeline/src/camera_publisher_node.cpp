@@ -24,9 +24,16 @@ void CameraPublisherNode::publish_frame()
 {
     cv::Mat frame;
     if (!cap->read(frame)) {
-        RCLCPP_WARN(this->get_logger(), "End of video or cannot read frame. Shutting down.");
-        rclcpp::shutdown();
-        return;
+        // Loop the video instead of stopping
+        RCLCPP_WARN_ONCE(this->get_logger(), "End of video reached. Looping back to start.");
+        cap->set(cv::CAP_PROP_POS_FRAMES, 0);
+
+        // Shut down if the video cannot restart
+        if (!cap->read(frame)) {
+            RCLCPP_WARN(this->get_logger(), "Cannot restart video. Shutting down.");
+            rclcpp::shutdown();
+            return;
+        }
     }
 
     auto msg = cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", frame).toImageMsg();
@@ -47,4 +54,3 @@ int main(int argc, char *argv[])
     rclcpp::shutdown();
     return 0;
 }
-
